@@ -1,10 +1,22 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
+import connectDB from "./database/dbConnect.js";
+dotenv.config({path:"./.env"});
 const app=express();
 const port=process.env.PORT || 3000;
-app.get("/",(req,res)=>{
-    res.send("hii")
+connectDB()
+.then(()=>{
+    app.listen(port,()=>{
+        console.log(`server is running at local host${port}`)
+         app.on('error',(error)=>{
+        console.log("DB_Connection failed");
+        throw error })
+    })
+    
+})
+.catch((error)=>{
+    console.log("Error in connecting to database:",error)
+    throw error;
 })
 app.listen(port,()=>{
     console.log(`server is running at local host${port}`)
