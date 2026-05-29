@@ -1,10 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
 import connectDB from "./database/dbConnect.js";
 import router from "./routes/noteRoutes.js";
-dotenv.config({path:"./.env"});
+import cookieParser from "cookie-parser";
+
 const app=express();
+app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); //It allows your server to read data coming from HTML forms and extended:true means it can read nested objects as well
 app.use("/api/notes",router); // why this is used because we want to use the router for all the routes that start with /api/notes
 const port=process.env.PORT || 3000;
 connectDB()
