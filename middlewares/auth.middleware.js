@@ -1,10 +1,11 @@
 import ApiError from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
 const verifyJWT=asyncHandler(async(req,res,next)=>{
    try {
-    const token=req.cookies?.accessToken||req.header("Authorization")?.replace("Bearer","");
+    const token=req.cookies?.accessToken||req.header("Authorization")?.replace("Bearer ",""); // here "Bearer " is correct because in client side we are sending token in this format
     if(!token)
     {
         throw new ApiError(401,"Unauthorized user");
@@ -14,7 +15,7 @@ const verifyJWT=asyncHandler(async(req,res,next)=>{
     {
         throw new ApiError(401,"token not verified ! ")
     }
-    const user=await User.findById(decodedToken._id).select("-password -refreshToken")
+    const user=await User.findById(decodedToken.id).select("-password -refreshToken")
     if(!user)
     {
         throw new ApiError(401,"user not found ! ")

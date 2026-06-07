@@ -3,14 +3,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import User from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 const registerUser=asyncHandler(async(req,res)=>{
-    /*
+/*
 1.take username ,fullname,email,new password,avatar
 2. check whether you got or not
 3. take localAvatarPath
 4.uploadOncloudnary
 5.create a data base form this user ,finally user registered
-
 */ 
     const {userName,email,password}=req.body;
     if([userName,email,password].some((field)=>field?.trim()===""))
@@ -50,12 +50,12 @@ const generateAccessAndRefreshToken=async function(userId)
 {
     try {
         const user=await User.findById(userId);
-        console.log(user);
+        // console.log(user);
         if(!user) throw new ApiError(401,"user not found while generating AT&RT")
         const accessToken=user.generateAccessToken();
         const refreshToken=user.generateRefreshToken();
-        console.log("accessToken in gen func ",accessToken);
-        console.log("refreshToken in gen func ",refreshToken);
+        // console.log("accessToken in gen func ",accessToken);
+        // console.log("refreshToken in gen func ",refreshToken);
         user.refreshToken=refreshToken;
         await user.save({validateBeforeSave:false})
         return {accessToken,refreshToken}
@@ -83,8 +83,8 @@ const loginUser=asyncHandler(async(req,res)=>{
      throw  new ApiError(404,"Password is incorrect ! ")
     }
     const {accessToken,refreshToken}=await generateAccessAndRefreshToken(user._id);
-    console.log("accessToken ",accessToken);
-    console.log("refreshToken ",refreshToken);
+    // console.log("accessToken ",accessToken);
+    // console.log("refreshToken ",refreshToken);
     const loggedInUser=await User.findById(user._id).select("-password -refreshToken")
     
     // make the cookies editable only by server
@@ -126,4 +126,42 @@ const logOutUser=asyncHandler(async(req,res)=>{
            message:"Log out successfully"
       })
 })
-export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser};
+
+// controllers/authController.js
+const googleCallback = async (req, res) => {
+    try {
+
+        const {accessToken,refreshToken}=await generateAccessAndRefreshToken(req.user._id);
+    // console.log("accessToken ",accessToken);
+    // console.log("refreshToken ",refreshToken);
+    const loggedInUser=await User.findById(req.user._id).select("-password -refreshToken")
+    
+    // make the cookies editable only by server
+    const options={
+          httpOnly:true,
+          secure:true
+    }
+    
+    // let's make cookies
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refreshToken",refreshToken,options)
+    /*“We store access and refresh tokens in cookies to improve security. Cookies with httpOnly flag prevent JavaScript access, protecting against XSS attacks.
+     Access tokens are short-lived for security, while refresh tokens allow generating new access tokens without forcing the user to log in again.”
+     XSS (Cross-Site Scripting) is a security attack where an attacker injects malicious JavaScript into a website, and it runs in other users’ browsers. */
+    .json(
+       new ApiResponse(200,{
+            user:loggedInUser,accessToken,refreshToken
+        },
+        "User loggedIn Succesefully !!")
+    )
+}    
+ catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser,googleCallback};
