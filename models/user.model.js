@@ -27,12 +27,26 @@ const userSchema=new mongoose.Schema({
     refreshToken:{
         type:String,
         default:""
+    },
+    otp:{
+        type:String
+    },
+    otpExpiry:{
+        type:Number,
+        default:0
     }
 },{timestamps:true})
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return ;
     this.password = await bcrypt.hash(this.password, 10);
 });
+userSchema.pre("save",async function(){
+    if(!this.isModified("otp")) return ;
+    this.otp=await bcrypt.hash(this.otp.toString(),10);
+})
+userSchema.methods.isOtpCorrect=async function(otp){
+    return await bcrypt.compare(otp.toString(),this.otp);
+}
 userSchema.methods.isPasswordCorrect=async function(password){
     return await bcrypt.compare(password,this.password)
 }

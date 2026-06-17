@@ -4,6 +4,9 @@ import User from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import { text } from "express";
+
 const registerUser=asyncHandler(async(req,res)=>{
 /*
 1.take username ,fullname,email,new password,avatar
@@ -27,7 +30,7 @@ const registerUser=asyncHandler(async(req,res)=>{
     if(!avatarLocalPath) {
         throw new ApiError(401,"Error in avatar local path !")
     }
-    console.log("avatarLocalPath:",avatarLocalPath);
+    // console.log("avatarLocalPath:",avatarLocalPath);
     const avatar=await uploadOnCloudinary(avatarLocalPath);
     if(!avatar)
     {
@@ -164,4 +167,80 @@ const googleCallback = async (req, res) => {
         });
     }
 };
-export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser,googleCallback};
+const sendmail=asyncHandler(async(req,res)=>{
+    const {email}=req.body;
+     const transporter=nodemailer.createTransport({
+        service:"gmail",
+        secure:true,
+        auth:{
+            user:process.env.GOOGLE_EMAIL,
+            pass:process.env.GOOGLE_PASSWORD
+        }
+     })
+     if(!transporter) throw new ApiError(500,"Error in creating transporter for nodemailer !")
+    const info=await transporter.sendMail({
+        from:process.env.GOOGLE_EMAIL,
+        to:email,
+        subject:"Testing nodemailer",
+        text:"This is a test email sent using nodemailer!"
+     })
+     
+     if(!info) throw new ApiError(500,"Error in sending email !")
+     res.status(200).json({
+        success:true,
+        message:"Email sent successfully"
+     })
+     
+})
+
+const forgetPassword=asyncHandler(async(req,res)=>{
+          const {email}=req.body;
+          if(!email) throw new ApiError(401,"Email required !")
+          const verifiedEmail=await User.findOne({email});
+        if(!verifiedEmail) throw new ApiError(401,"Invalid email !")
+            const otp=Math.floor(100000+Math.random()*900000);
+            const otpExpiry=Date.now() +10*60*1000;
+              verifiedEmail.otp=otp.toString();
+              verifiedEmail.otpExpiry=otpExpiry;
+              await verifiedEmail.save();
+                
+           
+        const transporter=nodemailer.createTransport({
+            service:"gmail",
+            secure:true,
+            auth:{
+                 user:process.env.GOOGLE_EMAIL,
+                 pass:process.env.GOOGLE_PASSWORD
+            }
+        })
+        if(!transporter) throw new ApiError(500,"Error in generating Transporter !")
+            const mail=await transporter.sendMail({
+           from:process.env.GOOGLE_EMAIL,
+           to:email,
+           subject:"OTP for Reseting Password",
+           text:`Your OTP is ${otp}`
+        })
+        res.status(200).json(
+            new ApiResponse(200,"OTP send successfully !")
+        )
+})
+
+const verifyOtp=asyncHandler(async(req,res)=>{
+        const {email,otp}=req.body;
+       
+        if(!otp) throw new ApiError(400,"OTP is required !");
+        const user=await User.findOne({email});
+        if(!user) throw new ApiError(400,"Invalid email !");
+        if(Date.now()>user.otpExpiry){
+            throw new ApiError(400,"OTP is expired !")
+        }
+        const verifiedOtp=await user.isOtpCorrect(otp);
+            if(!verifiedOtp) throw new ApiError(400,"OTP is wrong")
+                user.otp=0;
+            user.otpExpiry=0;
+            await user.save({validateBeforeSave:false})
+            res.status(200).json(new ApiResponse(200,"OTP verified successfully !"))
+})
+
+
+export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser,googleCallback,sendmail,forgetPassword,verifyOtp};

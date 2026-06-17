@@ -3,7 +3,10 @@ import {
   registerUser,
   loginUser,
   logOutUser,
-  googleCallback
+  googleCallback,
+  sendmail,
+  forgetPassword,
+  verifyOtp
 } from "../controllers/user.controller.js";
 import passport from "passport";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -47,5 +50,10 @@ router.get(
     scope: ["profile", "email"],
   })
 );
-
+router.get("/test",()=>{
+  res.send("auth is working")
+})
+router.post("/sendMail",sendmail)
+router.post("/forget_pass",forgetPassword)
+router.post("/verify_Otp",verifyOtp)
 export default router;
