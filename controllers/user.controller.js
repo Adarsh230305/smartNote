@@ -203,9 +203,7 @@ const forgetPassword=asyncHandler(async(req,res)=>{
               verifiedEmail.otp=otp.toString();
               verifiedEmail.otpExpiry=otpExpiry;
               await verifiedEmail.save();
-                
-           
-        const transporter=nodemailer.createTransport({
+const transporter=nodemailer.createTransport({
             service:"gmail",
             secure:true,
             auth:{
@@ -221,7 +219,7 @@ const forgetPassword=asyncHandler(async(req,res)=>{
            text:`Your OTP is ${otp}`
         })
         res.status(200).json(
-            new ApiResponse(200,"OTP send successfully !")
+            new ApiResponse(200,null,"OTP send successfully !")
         )
 })
 
@@ -230,6 +228,7 @@ const verifyOtp=asyncHandler(async(req,res)=>{
        
         if(!otp) throw new ApiError(400,"OTP is required !");
         const user=await User.findOne({email});
+        console.log("User: ",user);
         if(!user) throw new ApiError(400,"Invalid email !");
         if(Date.now()>user.otpExpiry){
             throw new ApiError(400,"OTP is expired !")
@@ -239,8 +238,18 @@ const verifyOtp=asyncHandler(async(req,res)=>{
                 user.otp=0;
             user.otpExpiry=0;
             await user.save({validateBeforeSave:false})
-            res.status(200).json(new ApiResponse(200,"OTP verified successfully !"))
+            res.status(200).json(new ApiResponse(200,null,"OTP verified successfully !"))
+})
+const resetPass=asyncHandler(async(req,res)=>{
+   const {email,newPass}=req.body;
+   if([email,newPass].some((field)=>field?.trim()=="")){
+    throw new ApiError(400,"All field is required !");
+   }
+   const user=await User.findOne({email});
+   if(!user) throw new ApiError(400,"Email not registered !");
+   user.password=newPass;
+   await user.save({validateBeforeSave:false});
+   res.status(200).json(new ApiResponse(200,null,"Password updated successfully !"));
 })
 
-
-export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser,googleCallback,sendmail,forgetPassword,verifyOtp};
+export{registerUser,loginUser,generateAccessAndRefreshToken,logOutUser,googleCallback,sendmail,forgetPassword,verifyOtp,resetPass};

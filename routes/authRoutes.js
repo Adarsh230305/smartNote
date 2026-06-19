@@ -6,7 +6,8 @@ import {
   googleCallback,
   sendmail,
   forgetPassword,
-  verifyOtp
+  verifyOtp,
+  resetPass
 } from "../controllers/user.controller.js";
 import passport from "passport";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -56,4 +57,5 @@ router.get("/test",()=>{
 router.post("/sendMail",sendmail)
 router.post("/forget_pass",forgetPassword)
 router.post("/verify_Otp",verifyOtp)
+router.post("/resetPass",resetPass)
 export default router;
